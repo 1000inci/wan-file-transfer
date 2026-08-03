@@ -27,12 +27,36 @@ export const userAPI = {
   remove: (username: string) => api.delete(`/users/${encodeURIComponent(username)}`),
 }
 
+export interface UploadProgress {
+  loaded: number
+  total: number
+  percent: number
+}
+
 export const fileAPI = {
-  upload: (file: File) => {
+  // onProgress: yukleme ilerlemesi (yuzde + bayt)
+  // signal: AbortController.signal — yuklemeyi yarida durdurmak icin
+  upload: (
+    file: File,
+    onProgress?: (p: UploadProgress) => void,
+    signal?: AbortSignal,
+  ) => {
     const formData = new FormData()
     formData.append('file', file)
     return api.post('/files/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      signal,
+      onUploadProgress: (e) => {
+        if (!onProgress) return
+        // e.total tarayici bazi durumlarda vermez; dosya boyutuna dus
+        const total = e.total ?? file.size
+        if (!total) return
+        onProgress({
+          loaded: e.loaded,
+          total,
+          percent: Math.min(100, Math.round((e.loaded / total) * 100)),
+        })
+      },
     })
   },
   list: () => api.get('/files'),
