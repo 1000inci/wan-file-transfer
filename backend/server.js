@@ -30,10 +30,30 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const id = crypto.randomUUID()
     const ext = file.originalname.substring(file.originalname.lastIndexOf('.'))
-    cb(null, `${id}${ext}`)
+    const name = `${id}${ext}`
+    // istemci yuklemeyi yarida keserse silebilmek icin yolu kaydet
+    ;(req.yazilanDosyalar ||= []).push(join(uploadsDir, name))
+    cb(null, name)
   }
 })
 const upload = multer({ storage })
+
+// Yukleme yarida kesilirse (istemci "Durdur" dedi veya baglanti koptu) diskte
+// yarim dosya kalir. Yanit tamamlanmadan baglanti kapanirsa onlari sil.
+function temizlemeyiBagla(req, res, next) {
+  req.yazilanDosyalar = []
+  res.on('close', () => {
+    if (res.writableFinished) return // normal tamamlandi, dokunma
+    req.yuklemeIptal = true
+    // multer'in yazma akisi kapansin diye kisa bir gecikme
+    setTimeout(() => {
+      for (const yol of req.yazilanDosyalar) {
+        try { unlinkSync(yol) } catch { /* zaten yok */ }
+      }
+    }, 500)
+  })
+  next()
+}
 
 const tokens = {}
 const resetTokens = {}
@@ -154,7 +174,9 @@ app.delete('/api/users/:username', checkAdmin, (req, res) => {
 })
 
 // --- Dosya uclari ---
-app.post('/api/files/upload', checkAuth, upload.single('file'), (req, res) => {
+app.post('/api/files/upload', checkAuth, temizlemeyiBagla, upload.single('file'), (req, res) => {
+  // iptal edilmisse metadata yazma; dosyayi res 'close' temizleyecek
+  if (req.yuklemeIptal) return
   if (!req.file) return res.status(400).json({ message: 'No file' })
   const fileId = req.file.filename.split('.')[0]
   req.file.originalname = Buffer.from(req.file.originalname, "latin1").toString("utf8")

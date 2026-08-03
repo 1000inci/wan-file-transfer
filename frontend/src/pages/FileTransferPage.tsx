@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import axios from 'axios'
 import { fileAPI } from '../api'
 import './FileTransferPage.css'
 
@@ -14,8 +15,18 @@ export default function FileTransferPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
+  const [percent, setPercent] = useState(0)
+  const [loaded, setLoaded] = useState(0)
+  const [speed, setSpeed] = useState(0)
+  // yukleme %100'e ulastiktan sonra sunucu dosyayi yazip cevap verene kadar gecen sure
+  const [finishing, setFinishing] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
+  const startedAtRef = useRef(0)
 
   useEffect(() => { loadFiles() }, [])
+
+  // sayfa kapanirsa/bilesen sokulurse acik istegi birak
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const loadFiles = async () => {
     try {
@@ -27,19 +38,52 @@ export default function FileTransferPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedFile) return
+
+    const controller = new AbortController()
+    abortRef.current = controller
+    startedAtRef.current = Date.now()
+
     setUploading(true)
+    setFinishing(false)
+    setMessage('')
+    setPercent(0)
+    setLoaded(0)
+    setSpeed(0)
+
     try {
-      await fileAPI.upload(selectedFile)
+      await fileAPI.upload(
+        selectedFile,
+        (p) => {
+          setPercent(p.percent)
+          setLoaded(p.loaded)
+          const elapsed = (Date.now() - startedAtRef.current) / 1000
+          if (elapsed > 0.5) setSpeed(p.loaded / elapsed)
+          // bayt akisi bitti, sunucunun cevabi bekleniyor
+          if (p.loaded >= p.total) setFinishing(true)
+        },
+        controller.signal,
+      )
       setMessage(`✅ ${selectedFile.name} uploaded!`)
       setSelectedFile(null)
       await loadFiles()
       setTimeout(() => setMessage(''), 3000)
     } catch (err) {
-      setMessage('Upload failed')
+      if (axios.isCancel(err)) {
+        setMessage('⏹️ Upload cancelled')
+      } else {
+        setMessage('Upload failed')
+      }
     } finally {
+      abortRef.current = null
       setUploading(false)
+      setFinishing(false)
+      setPercent(0)
+      setLoaded(0)
+      setSpeed(0)
     }
   }
+
+  const handleCancel = () => abortRef.current?.abort()
 
   const handleDownload = async (fileId: string, fileName: string) => {
     try {
@@ -80,11 +124,39 @@ export default function FileTransferPage() {
         <h2>📤 Upload File</h2>
         <form onSubmit={handleUpload}>
           <label className="file-input">
-            <input type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
+            <input
+              type="file"
+              disabled={uploading}
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+            />
             {selectedFile ? selectedFile.name : 'Choose file'}
           </label>
           <button type="submit" disabled={!selectedFile || uploading}>{uploading ? 'Uploading...' : 'Upload'}</button>
         </form>
+
+        {uploading && (
+          <div className="upload-progress">
+            <div className="progress-track">
+              <div
+                className={`progress-bar${finishing ? ' finishing' : ''}`}
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+            <div className="progress-info">
+              <span className="progress-percent">%{percent}</span>
+              <span className="progress-detail">
+                {finishing
+                  ? 'Processing on server...'
+                  : `${formatSize(loaded)}${selectedFile ? ` / ${formatSize(selectedFile.size)}` : ''}` +
+                    (speed > 0 ? ` · ${formatSize(speed)}/s` : '')}
+              </span>
+              <button type="button" className="cancel-btn" onClick={handleCancel}>
+                ⏹️ Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {message && <p className={message.includes('✅') ? 'success' : 'error'}>{message}</p>}
       </div>
 
