@@ -1,0 +1,26 @@
+node_modules/
+.env
+.env.*
+*.log
+uploads/
+dist/
+build/
+.DS_Store
+
+# canlı veri — git dışı
+backend/users.json
+backend/metadata.json
+
+# elle alınmış yedekler
+*.bak
+*.bak2
+*.bak-*
+
+# canlı veri — git dışı
+backend/users.json
+backend/metadata.json
+
+# elle alınmış yedekler
+*.bak
+*.bak2
+*.bak-*
