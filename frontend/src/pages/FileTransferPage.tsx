@@ -10,6 +10,12 @@ interface FileInfo {
   uploadedAt: string
 }
 
+// Cloudflare (ucretsiz plan) proxy'li isteklerde govde boyutunu 100 MB ile
+// sinirlar. transfer.1000inci.com tunelden gectigi icin bu esigi asan dosya
+// yuklenemez; istek kenarda kesilir ve tarayici ilerleme uretmeyi birakir.
+// Kullanici 4 dakika bekleyip basarisizligi gormesin diye onden uyariyoruz.
+const CLOUDFLARE_MAX_BYTES = 100 * 1024 * 1024
+
 export default function FileTransferPage() {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -38,6 +44,7 @@ export default function FileTransferPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedFile) return
+    if (selectedFile.size > CLOUDFLARE_MAX_BYTES) return
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -85,6 +92,8 @@ export default function FileTransferPage() {
 
   const handleCancel = () => abortRef.current?.abort()
 
+  const tooLarge = !!selectedFile && selectedFile.size > CLOUDFLARE_MAX_BYTES
+
   const handleDownload = async (fileId: string, fileName: string) => {
     try {
       const response = await fileAPI.download(fileId)
@@ -131,8 +140,16 @@ export default function FileTransferPage() {
             />
             {selectedFile ? selectedFile.name : 'Choose file'}
           </label>
-          <button type="submit" disabled={!selectedFile || uploading}>{uploading ? 'Uploading...' : 'Upload'}</button>
+          <button type="submit" disabled={!selectedFile || uploading || tooLarge}>{uploading ? 'Uploading...' : 'Upload'}</button>
         </form>
+
+        {tooLarge && selectedFile && (
+          <p className="size-warning">
+            ⚠️ {formatSize(selectedFile.size)} — too large to upload.
+            The Cloudflare tunnel accepts at most {formatSize(CLOUDFLARE_MAX_BYTES)} per request.
+            Please choose a smaller file or split it into parts.
+          </p>
+        )}
 
         {uploading && (
           <div className="upload-progress">

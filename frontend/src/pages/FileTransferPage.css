@@ -7,6 +7,7 @@
 button { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 button:hover { background: #764ba2; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+.size-warning { margin-top: 14px; padding: 12px; border-radius: 6px; font-size: 13px; line-height: 1.5; color: #8a6d3b; background: #fcf8e3; border: 1px solid #faebcc; }
 .upload-progress { margin-top: 18px; }
 .progress-track { height: 10px; background: #ecf0f1; border-radius: 999px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 999px; transition: width .15s linear; }
