@@ -52,8 +52,13 @@ kayıtları eşleştirmelidir.
 
 ## Bilinen kısıtlar ve yapılacaklar
 
-- `mini.1000inci.com` (yerel port 8099) Cloudflare Access dışındadır; içeriği gözden
-  geçirilmeli, hassassa Access'e eklenmelidir.
+- `mini.1000inci.com` (yerel port 8099) bir Telegram Mini App'tir (SistemKontrol, salt-okunur
+  durum paneli) ve bilinçli olarak Cloudflare Access dışındadır: Telegram uygulaması
+  sayfayı kendi içinden yükler, Access giriş sayfasından geçemez. Veri uç noktası
+  (`/api/durum`) Telegram `initData` HMAC imzası, süre sınırı ve kullanıcı beyaz listesi
+  (`KONTROL_ALLOWED_CHAT_IDS`) ile korunur; kimliksiz ve sahte imzalı istekler 401 döner.
+  Beyaz liste boş bırakılmamalıdır: boşsa kod kontrolü atlar ve botla etkileşen her
+  Telegram kullanıcısı durum verisini okuyabilir.
 - Internete açık RustDesk relay portları (21115-21117/tcp, 21116/udp) bilinçli olarak
   açıktır; `rustdesk/rustdesk-server:latest` imajı düzenli güncellenmelidir.
 - `rpcbind` (111) tüm arayüzlerde dinler; iptables dışarıdan erişimi engeller, kullanılmıyorsa
