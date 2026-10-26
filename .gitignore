@@ -24,3 +24,4 @@ backend/metadata.json
 *.bak
 *.bak2
 *.bak-*
+*.bak_*
