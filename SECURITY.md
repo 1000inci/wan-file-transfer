@@ -22,7 +22,7 @@ Bir güvenlik açığı bulduysanız herkese açık issue açmayın; depo sahibi
 | 1 | Parolalar tuzsuz SHA-256 ile saklanıyordu | Yüksek | Düzeltildi: scrypt + kullanıcı başına rastgele salt. Eski kayıtlar ilk başarılı girişte otomatik yükseltilir |
 | 2 | Login / forgot / reset uçlarında rate limit yoktu | Yüksek | Düzeltildi: IP başına 15 dk'da 10 deneme, aşılırsa HTTP 429 |
 | 3 | Oturum token'ları süresizdi, logout yoktu | Yüksek | Düzeltildi: 12 saat TTL, `POST /api/auth/logout` eklendi |
-| 4 | Dosyalarda sahiplik kontrolü yoktu (herhangi bir giriş yapmış kullanıcı başkasının dosyasını listeleyebilir, indirebilir, silebilirdi) | Yüksek | Düzeltildi: yeni yüklemeler `owner` alanıyla kaydedilir; yalnızca sahibi ve adminler erişir |
+| 4 | Dosyalarda sahiplik kontrolü yoktu (herhangi bir giriş yapmış kullanıcı başkasının dosyasını listeleyebilir, indirebilir, silebilirdi) | Yüksek | Düzeltildi: yeni yüklemeler `owner` alanıyla kaydedilir; yalnızca sahibi ve adminler erişir. Sahibi olmayan eski dosyalar (2026-11-03'ten beri) yalnızca adminlere açıktır |
 | 5 | CORS tüm origin'lere açıktı | Orta | Düzeltildi: `ALLOWED_ORIGINS` ortam değişkeni (varsayılan: transfer ve transferapi alan adları) |
 | 6 | Güvenlik header'ları yoktu | Orta | Düzeltildi: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS; `x-powered-by` kapatıldı |
 
@@ -60,12 +60,12 @@ kayıtları eşleştirmelidir.
   Beyaz liste boş bırakılmamalıdır: boşsa kod kontrolü atlar ve botla etkileşen her
   Telegram kullanıcısı durum verisini okuyabilir.
 - Internete açık RustDesk relay portları (21115-21117/tcp, 21116/udp) bilinçli olarak
-  açıktır; `rustdesk/rustdesk-server:latest` imajı düzenli güncellenmelidir.
-- `rpcbind` (111) tüm arayüzlerde dinler; iptables dışarıdan erişimi engeller, kullanılmıyorsa
-  kapatılması önerilir.
-
-- **Sahibi olmayan eski dosyalar** geriye uyum için hâlâ tüm giriş yapmış kullanıcılara
-  açıktır. İstenirse yalnızca adminlere kısıtlanabilir.
+  açıktır. İmaj (`rustdesk/rustdesk-server:latest`) `~/rustdesk/guncelle.sh` ile her ayın
+  15'inde güncellenir; betik anahtarı ve portları doğrular, tutmazsa eski imaja döner ve
+  Telegram'dan bildirir. 2026-11-03 itibarıyla sunucu Docker Hub'daki son sürümde (1.1.16).
+- `rpcbind` (111) kullanılmadığı için (NFS bağlantısı/paylaşımı yok) 2026-11-03'te
+  kapatıldı ve mask edildi. NFS gerekirse: `sudo systemctl unmask rpcbind.socket
+  rpcbind.service && sudo systemctl enable --now rpcbind.socket`.
 - Oturum token'ları bellekte tutulur; servis yeniden başladığında herkes tekrar giriş yapar.
 - Rate limiter bellek içidir ve tek süreç için tasarlanmıştır. Birden fazla süreçle
   çalıştırılırsa paylaşımlı bir depoya (örn. Redis) taşınmalıdır.

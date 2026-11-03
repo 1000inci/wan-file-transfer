@@ -260,11 +260,11 @@ app.post('/api/files/upload', checkAuth, temizlemeyiBagla, upload.single('file')
   writeFileSync(metadataFile, JSON.stringify(metadata))
   res.json({ message: 'Success', fileName: req.file.originalname, size: req.file.size, fileId })
 })
-// Sahiplik: owner'i olmayan eski dosyalar herkese acik kalir (geriye uyum);
-// yeni dosyalara yalniz sahibi ve adminler erisir.
+// Sahiplik: dosyaya yalniz sahibi ve adminler erisir. owner'i olmayan
+// (yamadan once yuklenmis) dosyalar yalniz adminlere aciktir.
 function canAccess(username, fileId) {
   const owner = metadata[fileId]?.owner
-  return !owner || owner === username || isAdmin(username)
+  return (owner && owner === username) || isAdmin(username)
 }
 app.get('/api/files', checkAuth, (req, res) => {
   const files = readdirSync(uploadsDir).filter(filename => canAccess(req.username, filename.split('.')[0])).map(filename => {
