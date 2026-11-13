@@ -3,6 +3,7 @@ import AuthPage from './pages/AuthPage'
 import ResetPage from './pages/ResetPage'
 import FileTransferPage from './pages/FileTransferPage'
 import AdminUsers from './pages/AdminUsers'
+import { authAPI } from './api'
 import './App.css'
 
 function App() {
@@ -12,6 +13,9 @@ function App() {
   const isAdmin = localStorage.getItem('isAdmin') === '1'
 
   const handleLogout = () => {
+    // Sunucudaki token'i da gecersiz kil (yoksa 12 saat gecerli kalir); ag hatasi cikisi engellemesin
+    const token = localStorage.getItem('token')
+    if (token) authAPI.logout(token).catch(() => {})
     localStorage.removeItem('token')
     localStorage.removeItem('isAdmin')
     setIsAuthenticated(false)
