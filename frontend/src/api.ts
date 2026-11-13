@@ -18,6 +18,11 @@ export const authAPI = {
     api.post('/auth/forgot', { username, email }),
   reset: (token: string, password: string) =>
     api.post('/auth/reset', { token, password }),
+  // Token acikca verilir: cikista localStorage hemen temizlenir, interceptor
+  // ise asenkron calistigi icin onu bulamaz ve istek token'siz giderdi.
+  // Govde {} (null degil): JSON basligiyla "null" gider, express.json strict modda 400 verir.
+  logout: (token: string) =>
+    api.post('/auth/logout', {}, { headers: { Authorization: `Bearer ${token}` } }),
 }
 
 export const userAPI = {
