@@ -290,4 +290,15 @@ app.delete('/api/files/:fileId', checkAuth, (req, res) => {
 })
 
 app.get('/api/health', (req, res) => res.json({ status: 'Running' }))
+
+// Hata yaniti: yigin izi (sunucu dosya yollari, kutuphane yapisi) istemciye gitmesin.
+// Express'in varsayilan isleyicisi NODE_ENV=production degilse izi HTML olarak basiyordu;
+// bozuk JSON gonderen herkes, kimlik dogrulamadan, goruyordu. Ayrinti sunucu loguna yazilir.
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err)
+  const status = err.status || err.statusCode || (err instanceof multer.MulterError ? 400 : 500)
+  if (status >= 500) console.error(err)
+  res.status(status).json({ message: status >= 500 ? 'Sunucu hatasi' : 'Gecersiz istek' })
+})
+
 app.listen(8000, '0.0.0.0', () => console.log('Backend: http://0.0.0.0:8000'))
